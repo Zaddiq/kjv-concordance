@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KJV Concordance</title>
+<meta name="description" content="Search every word of the King James Bible, browse chapters, and look up Strong's Greek and Hebrew numbers. Works offline once loaded.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%233b2f63'/%3E%3Cpath d='M7 9l9 2v13l-9-2zM25 9l-9 2v13l9-2z' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #faf8f3; --surface: #ffffff; --ink: #1f1b16; --muted: #6b6358; --line: #e4ded1;
+  --accent: #7a3b2e; --accent-ink: #ffffff; --mark: #f6e2a8;
+  --serif: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16140f; --surface: #201d17; --ink: #ebe5d8; --muted: #a39b8b; --line: #3a352b;
+    --accent: #e0a979; --accent-ink: #1b1409; --mark: #5a4a1e;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #16140f; --surface: #201d17; --ink: #ebe5d8; --muted: #a39b8b; --line: #3a352b;
+  --accent: #e0a979; --accent-ink: #1b1409; --mark: #5a4a1e;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--sans); }
+a { color: var(--accent); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header.top { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.bar { max-width: 760px; margin: 0 auto; padding: 10px 16px 0; }
+.brand { display: flex; align-items: center; justify-content: space-between; }
+.brand h1 { margin: 0; font: 600 1.15rem var(--serif); letter-spacing: .01em; }
+.theme { background: none; border: 0; padding: 4px 8px; cursor: pointer; color: var(--muted); font-size: 1.5rem; line-height: 1; }
+nav.tabs { display: flex; gap: 4px; margin-top: 6px; overflow-x: auto; }
+nav.tabs a { padding: 8px 14px; text-decoration: none; color: var(--muted); border-bottom: 3px solid transparent; white-space: nowrap; font-weight: 500; }
+nav.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+main { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; min-height: 70vh; }
+h2 { font: 600 1.4rem var(--serif); margin: 8px 0 12px; }
+.hint { color: var(--muted); margin: 12px 0; }
+.status { color: var(--muted); padding: 32px 0; text-align: center; }
+.err { color: #b3261e; }
+
+input[type="search"], input[type="text"] {
+  width: 100%; padding: 12px 14px; font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.btn { display: inline-block; padding: 9px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; text-decoration: none; color: var(--ink); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn[disabled] { opacity: .4; cursor: default; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+
+ul.plain { list-style: none; margin: 0; padding: 0; }
+.list { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-top: 12px; }
+.list > li + li { border-top: 1px solid var(--line); }
+.item { display: block; width: 100%; text-align: left; padding: 12px 14px; background: none; border: 0; cursor: pointer; text-decoration: none; color: inherit; }
+.item:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.item .sub { display: block; color: var(--muted); font-size: .9rem; }
+.item .big { font-weight: 600; }
+.section-label { margin: 20px 0 4px; color: var(--accent); font-weight: 600; font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; }
+
+.ref { color: var(--accent); font-weight: 600; font-size: .9rem; }
+.tag { color: var(--muted); font-size: .9rem; }
+.text { display: block; font-family: var(--serif); font-size: 1.08rem; line-height: 1.6; margin-top: 2px; }
+mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2px; font-weight: 700; }
+
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
+.chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: .92rem; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 8px; margin-top: 12px; }
+.chapters a { text-align: center; padding: 10px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); text-decoration: none; color: var(--ink); }
+.chapters a:hover { border-color: var(--accent); }
+
+.chapter-text { font-family: var(--serif); font-size: 1.12rem; line-height: 1.75; }
+.chapter-text p { margin: 0; padding: 3px 6px; border-radius: 6px; cursor: pointer; }
+.chapter-text p:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.chapter-text sup { font: 600 .72rem var(--sans); color: var(--accent); margin-right: 6px; }
+.pager { display: flex; justify-content: space-between; margin-top: 20px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+.card .meta { font-weight: 600; }
+.card .def { margin-top: 6px; }
+.greek { font-family: var(--serif); }
+
+dialog { width: min(560px, calc(100vw - 24px)); max-height: 86vh; padding: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); }
+dialog::backdrop { background: rgba(0,0,0,.45); }
+.dlg { padding: 18px; display: flex; flex-direction: column; gap: 10px; max-height: 86vh; overflow: auto; }
+.dlg h3 { margin: 0; font: 600 1.15rem var(--serif); }
+.dlg .text { margin: 0; }
+.nums { display: flex; flex-wrap: wrap; gap: 6px; }
+.nums a { text-decoration: none; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: .9rem; color: var(--ink); }
+.nums a b { color: var(--accent); margin-left: 4px; }
+
+footer { max-width: 760px; margin: 0 auto; padding: 0 16px 32px; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <div class="brand">
+      <h1>KJV Concordance</h1>
+      <button class="theme" id="theme" aria-label="Switch light or dark theme" title="Light / dark">◐</button>
+    </div>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#/search" data-tab="search">Search</a>
+      <a href="#/read" data-tab="read">Read</a>
+      <a href="#/strongs" data-tab="strongs">Strong's</a>
+      <a href="#/saved" data-tab="saved">Saved</a>
+    </nav>
+  </div>
+</header>
+<main id="app"><p class="status">Loading the Bible…</p></main>
+<footer>
+  Scripture: King James Version (public domain in the United States). Strong's numbers and definitions from
+  <a href="https://github.com/jburson/bible-data">jburson/bible-data</a>. Nothing you type leaves your browser.
+</footer>
+<dialog id="dlg" aria-label="Verse"></dialog>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------- helpers
+const $app = document.getElementById("app");
+const $dlg = document.getElementById("dlg");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const TOKEN = /\p{L}+(?:['’]\p{L}+)*/gu;
+const norm = w => w.toLowerCase().replace(/’/g, "'");
+const getJSON = url => fetch(url).then(r => { if (!r.ok) throw new Error(url + " (" + r.status + ")"); return r.json(); });
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+// ---------------------------------------------------------------- data
+let BOOKS, VERSES, WORDS, WORD_VERSES, WORD_TOTAL, CHAPTERS, REF_INDEX;
+let STRONGS, USES, VERSE_STRONGS, strongsPromise;
+
+function buildIndex() {
+  const vmap = new Map(), total = new Map();
+  CHAPTERS = new Map(); REF_INDEX = new Map();
+  VERSES.forEach((v, i) => {
+    const ck = v[0] + ":" + v[1];
+    const c = CHAPTERS.get(ck);
+    if (c) c[1] = i; else CHAPTERS.set(ck, [i, i]);
+    REF_INDEX.set(ck + ":" + v[2], i);
+    const seen = new Set();
+    for (const m of v[3].matchAll(TOKEN)) {
+      const w = norm(m[0]);
+      total.set(w, (total.get(w) || 0) + 1);
+      if (!seen.has(w)) {
+        seen.add(w);
+        let a = vmap.get(w); if (!a) vmap.set(w, a = []);
+        a.push(i);
+      }
+    }
+  });
+  WORD_VERSES = vmap; WORD_TOTAL = total;
+  WORDS = [...vmap.keys()].sort();
+}
+
+function ensureStrongs() {
+  return strongsPromise || (strongsPromise = Promise.all([getJSON("data/strongs.json"), getJSON("data/uses.json")]).then(([s, u]) => {
+    STRONGS = s; USES = u; VERSE_STRONGS = new Map();
+    for (const [sid, arr] of Object.entries(u)) {
+      for (const row of arr) {
+        let l = VERSE_STRONGS.get(row[0]); if (!l) VERSE_STRONGS.set(row[0], l = []);
+        l.push([sid, row.slice(1).join(", ")]);
+      }
+    }
+  }).catch(e => { strongsPromise = null; throw e; }));
+}
+
+const bookName = i => BOOKS[VERSES[i][0]][0];
+const refOf = i => { const v = VERSES[i]; return BOOKS[v[0]][0] + " " + v[1] + ":" + v[2]; };
+const refKey = i => { const v = VERSES[i]; return v[0] + ":" + v[1] + ":" + v[2]; };
+const isOld = i => BOOKS[VERSES[i][0]][1] === "old";
+
+function wordsWithPrefix(p) {
+  let lo = 0, hi = WORDS.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (WORDS[mid] < p) lo = mid + 1; else hi = mid; }
+  const out = [];
+  for (let i = lo; i < WORDS.length && WORDS[i].startsWith(p); i++) out.push(WORDS[i]);
+  return out;
+}
+function versesFor(word, prefix) {
+  if (!prefix) return WORD_VERSES.get(word) || [];
+  const set = new Set();
+  for (const w of wordsWithPrefix(word)) for (const i of WORD_VERSES.get(w)) set.add(i);
+  return [...set].sort((a, b) => a - b);
+}
+
+// bookmarks are stored by reference ("book:chapter:verse") so they survive data changes
+const bookmarks = () => store.get("kjvc.bookmarks", []);
+const isSaved = i => bookmarks().includes(refKey(i));
+function toggleSaved(i) {
+  const k = refKey(i), list = bookmarks(), at = list.indexOf(k);
+  if (at >= 0) list.splice(at, 1); else list.unshift(k);
+  store.set("kjvc.bookmarks", list);
+}
+
+// ---------------------------------------------------------------- verse lists
+function highlight(text, word, prefix) {
+  if (!word) return esc(text);
+  let out = "", last = 0;
+  for (const m of text.matchAll(TOKEN)) {
+    const t = norm(m[0]);
+    if (prefix ? t.startsWith(word) : t === word) {
+      out += esc(text.slice(last, m.index)) + "<mark>" + esc(m[0]) + "</mark>";
+      last = m.index + m[0].length;
+    }
+  }
+  return out + esc(text.slice(last));
+}
+
+let LIST = null; // the chunked list currently on screen
+const PAGE = 100;
+function rowHTML(item) {
+  const i = item.i;
+  return '<li><button class="item" data-v="' + i + '"><span class="ref">' + esc(refOf(i)) + "</span>" +
+    (item.tag ? ' <span class="tag">· “' + esc(item.tag) + "”</span>" : "") +
+    '<span class="text">' + highlight(VERSES[i][3], LIST.word, LIST.prefix) + "</span></button></li>";
+}
+function renderList(items, word, prefix) {
+  LIST = { items, shown: 0, word, prefix };
+  const box = document.getElementById("results");
+  if (!box) return;
+  box.innerHTML = items.length ? '<ul class="plain list" id="rows"></ul><div id="more"></div>' : '<p class="hint">No verses.</p>';
+  if (items.length) showMore();
+}
+function showMore() {
+  const next = LIST.items.slice(LIST.shown, LIST.shown + PAGE);
+  document.getElementById("rows").insertAdjacentHTML("beforeend", next.map(rowHTML).join(""));
+  LIST.shown += next.length;
+  const left = LIST.items.length - LIST.shown;
+  document.getElementById("more").innerHTML = left > 0
+    ? '<div class="row-actions"><button class="btn" id="showmore">Show ' + Math.min(PAGE, left) + " more (" + left + " left)</button></div>" : "";
+}
+
+// ---------------------------------------------------------------- views
+let lastWordQuery = "", lastStrongsQuery = "";
+
+function viewSearch() {
+  $app.innerHTML = '<h2>Search a word</h2><input type="search" id="q" placeholder="love, grace, shepherd…" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Search a word">' +
+    '<div id="sugg"></div>';
+  const q = document.getElementById("q"); q.value = lastWordQuery;
+  const update = () => {
+    lastWordQuery = q.value;
+    const t = norm(q.value.trim());
+    const box = document.getElementById("sugg");
+    if (!t) { box.innerHTML = '<p class="hint">Type a word to see every form of it and how often it appears. Press Enter to list the verses.</p>'; return; }
+    const list = wordsWithPrefix(t).sort((a, b) => WORD_TOTAL.get(b) - WORD_TOTAL.get(a)).slice(0, 60);
+    if (!list.length) { box.innerHTML = '<p class="hint">No words start with “' + esc(t) + "”.</p>"; return; }
+    box.innerHTML = '<div class="row-actions"><a class="btn primary" href="#/word/' + encodeURIComponent(t) + '?prefix=1">All verses with words starting “' + esc(t) + "”</a></div>" +
+      '<ul class="plain list">' + list.map(w => '<li><a class="item" href="#/word/' + encodeURIComponent(w) + '"><span class="big">' + esc(w) + '</span><span class="sub">' +
+        WORD_TOTAL.get(w) + " times in " + WORD_VERSES.get(w).length + " verses</span></a></li>").join("") + "</ul>";
+  };
+  q.addEventListener("input", update);
+  q.addEventListener("keydown", e => {
+    if (e.key === "Enter" && q.value.trim()) location.hash = "#/word/" + encodeURIComponent(norm(q.value.trim()));
+  });
+  update();
+  if (!matchMedia("(pointer: coarse)").matches) q.focus();
+}
+
+function viewWord(word, prefix) {
+  const all = versesFor(word, prefix);
+  const ot = all.filter(isOld).length, nt = all.length - ot;
+  document.title = word + (prefix ? "…" : "") + " · KJV Concordance";
+  const total = prefix ? all.length : (WORD_TOTAL.get(word) || 0);
+  $app.innerHTML = '<p><a href="#/search">← Search</a></p><h2>' + esc(word) + (prefix ? "…" : "") + "</h2>" +
+    '<p class="hint">' + all.length + " verse" + (all.length === 1 ? "" : "s") +
+    (!prefix && total > all.length ? " · " + total + " occurrences" : "") +
+    (prefix ? " · all forms starting with “" + esc(word) + "”" : "") + "</p>" +
+    (!prefix && all.length ? '<p><a href="#/word/' + encodeURIComponent(word) + '?prefix=1">Include other forms (' + esc(word) + "…)</a></p>" : "") +
+    '<div class="chips" id="filter" role="group" aria-label="Testament filter">' +
+    '<button class="chip" data-f="all" aria-pressed="true">All ' + all.length + "</button>" +
+    '<button class="chip" data-f="old" aria-pressed="false">Old Testament ' + ot + "</button>" +
+    '<button class="chip" data-f="new" aria-pressed="false">New Testament ' + nt + "</button></div>" +
+    '<div id="results"></div>';
+  const show = f => {
+    document.querySelectorAll("#filter .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.f === f)));
+    const items = all.filter(i => f === "all" || (f === "old") === isOld(i)).map(i => ({ i }));
+    renderList(items, word, prefix);
+  };
+  document.getElementById("filter").addEventListener("click", e => { const c = e.target.closest(".chip"); if (c) show(c.dataset.f); });
+  show("all");
+}
+
+function viewRead() {
+  document.title = "Read · KJV Concordance";
+  let html = "<h2>Books</h2>", last = "";
+  BOOKS.forEach((b, i) => {
+    if (b[1] !== last) { last = b[1]; html += (i ? "</ul>" : "") + '<div class="section-label">' + (b[1] === "old" ? "Old Testament" : "New Testament") + '</div><ul class="plain list">'; }
+    html += '<li><a class="item" href="#/read/' + i + '"><span class="big">' + esc(b[0]) + '</span><span class="sub">' + b[2] + " chapters</span></a></li>";
+  });
+  $app.innerHTML = html + "</ul>";
+}
+
+function viewBook(bi) {
+  const b = BOOKS[bi]; if (!b) return notFound();
+  document.title = b[0] + " · KJV Concordance";
+  let g = "";
+  for (let c = 1; c <= b[2]; c++) g += '<a href="#/read/' + bi + "/" + c + '">' + c + "</a>";
+  $app.innerHTML = '<p><a href="#/read">← Books</a></p><h2>' + esc(b[0]) + '</h2><div class="chapters">' + g + "</div>";
+}
+
+function viewChapter(bi, ch) {
+  const b = BOOKS[bi], range = CHAPTERS.get(bi + ":" + ch); if (!b || !range) return notFound();
+  document.title = b[0] + " " + ch + " · KJV Concordance";
+  let body = "";
+  for (let i = range[0]; i <= range[1]; i++) body += '<p data-v="' + i + '"><sup>' + VERSES[i][2] + "</sup>" + esc(VERSES[i][3]) + "</p>";
+  const prev = ch > 1 ? "#/read/" + bi + "/" + (ch - 1) : (bi > 0 ? "#/read/" + (bi - 1) + "/" + BOOKS[bi - 1][2] : "");
+  const next = ch < b[2] ? "#/read/" + bi + "/" + (ch + 1) : (bi < BOOKS.length - 1 ? "#/read/" + (bi + 1) + "/1" : "");
+  $app.innerHTML = '<p><a href="#/read/' + bi + '">← ' + esc(b[0]) + "</a></p><h2>" + esc(b[0]) + " " + ch + "</h2>" +
+    '<p class="hint">Tap a verse to bookmark it, share it, or see its Strong\'s numbers.</p><div class="chapter-text">' + body + "</div>" +
+    '<div class="pager"><a class="btn"' + (prev ? ' href="' + prev + '"' : " disabled") + '>◀ Previous</a><a class="btn"' + (next ? ' href="' + next + '"' : " disabled") + ">Next ▶</a></div>";
+}
+
+async function viewStrongs() {
+  document.title = "Strong's · KJV Concordance";
+  $app.innerHTML = '<h2>Strong\'s numbers</h2><input type="search" id="q" placeholder="G26, H430, or an English word" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Strong\'s number or English word"><div id="sres"><p class="status">Loading Strong\'s data…</p></div>';
+  try { await ensureStrongs(); } catch (e) { document.getElementById("sres").innerHTML = '<p class="status err">Could not load Strong\'s data: ' + esc(e.message) + "</p>"; return; }
+  const q = document.getElementById("q"); q.value = lastStrongsQuery;
+  const update = () => {
+    lastStrongsQuery = q.value;
+    const t = q.value.trim(), box = document.getElementById("sres");
+    if (!t) { box.innerHTML = '<p class="hint">Look up a Greek (G) or Hebrew (H) word by its Strong\'s number, or search the definitions in English.</p>'; return; }
+    const m = /^([gh])\s*(\d{1,4})$/i.exec(t);
+    let ids;
+    if (m) { const id = m[1].toLowerCase() + Number(m[2]); ids = (STRONGS[id] || USES[id]) ? [id] : []; }
+    else {
+      const lt = t.toLowerCase();
+      ids = Object.keys(STRONGS).filter(k => STRONGS[k][0].toLowerCase().includes(lt)).slice(0, 60);
+    }
+    if (!ids.length) { box.innerHTML = '<p class="hint">Nothing found for “' + esc(t) + "”.</p>"; return; }
+    box.innerHTML = '<ul class="plain list">' + ids.map(id => {
+      const e = STRONGS[id];
+      return '<li><a class="item" href="#/strongs/' + id + '"><span class="sub">' + id.toUpperCase() + " · " + (id[0] === "h" ? "Hebrew" : "Greek") +
+        '</span><span class="greek">' + esc(e ? e[0].slice(0, 140) : "(no dictionary entry in the bundled data)") + "</span></a></li>";
+    }).join("") + "</ul>";
+  };
+  q.addEventListener("input", update);
+  update();
+}
+
+async function viewStrongsEntry(id) {
+  id = id.toLowerCase();
+  document.title = id.toUpperCase() + " · KJV Concordance";
+  $app.innerHTML = '<p><a href="#/strongs">← Strong\'s</a></p><p class="status">Loading…</p>';
+  try { await ensureStrongs(); } catch (e) { $app.innerHTML += '<p class="err">' + esc(e.message) + "</p>"; return; }
+  const e = STRONGS[id], uses = USES[id];
+  if (!e && !uses) return notFound();
+  const items = (uses || []).map(r => ({ i: r[0], tag: r.slice(1).join(", ") }));
+  $app.innerHTML = '<p><a href="#/strongs">← Strong\'s</a></p><h2>' + id.toUpperCase() + "</h2>" +
+    '<div class="card"><div class="meta">' + (id[0] === "h" ? "Hebrew" : "Greek") + (e && e[2] ? " · " + esc(e[2]) : "") + "</div>" +
+    (e && e[1] ? '<div class="tag">Pronounced: ' + esc(e[1]) + "</div>" : "") +
+    '<div class="def greek">' + esc(e ? e[0] : "No dictionary entry for this number in the bundled data. Its verses are listed below.") + "</div></div>" +
+    '<p class="hint">' + items.length + " verse" + (items.length === 1 ? "" : "s") + ' <span>· the word in quotes is how the KJV translated it there</span></p><div id="results"></div>';
+  renderList(items, "", false);
+}
+
+function viewSaved() {
+  document.title = "Saved · KJV Concordance";
+  const idx = bookmarks().map(k => REF_INDEX.get(k)).filter(i => i !== undefined);
+  $app.innerHTML = "<h2>Saved verses</h2>" + (idx.length ? "" : '<p class="hint">Open any verse and tap “Bookmark” to keep it here. Bookmarks stay in this browser only.</p>') + '<div id="results"></div>';
+  renderList(idx.map(i => ({ i })), "", false);
+  if (!idx.length) document.getElementById("results").innerHTML = "";
+}
+
+function notFound() { $app.innerHTML = '<h2>Not found</h2><p><a href="#/search">Back to search</a></p>'; }
+
+// ---------------------------------------------------------------- verse dialog
+async function openVerse(i) {
+  const draw = nums => {
+    const saved = isSaved(i);
+    $dlg.innerHTML = '<div class="dlg"><h3>' + esc(refOf(i)) + '</h3><p class="text">' + esc(VERSES[i][3]) + "</p>" +
+      '<div class="row-actions"><button class="btn primary" data-act="bm">' + (saved ? "Remove bookmark" : "Bookmark") + '</button>' +
+      '<button class="btn" data-act="copy">Copy</button>' +
+      (navigator.share ? '<button class="btn" data-act="share">Share</button>' : "") +
+      '<a class="btn" href="#/read/' + VERSES[i][0] + "/" + VERSES[i][1] + '" data-act="close">Read chapter</a></div>' +
+      (nums === null ? '<div class="tag">Loading Strong\'s numbers…</div>' :
+        nums.length ? '<div><div class="section-label" style="margin-top:4px">Strong\'s numbers</div><div class="nums">' +
+          nums.map(n => '<a href="#/strongs/' + n[0] + '" data-act="close">' + esc(n[1]) + "<b>" + n[0].toUpperCase() + "</b></a>").join("") + "</div></div>" : "") +
+      '<div class="row-actions"><button class="btn" data-act="close">Close</button></div></div>';
+  };
+  $dlg.dataset.v = i;
+  draw(VERSE_STRONGS ? (VERSE_STRONGS.get(i) || []) : null);
+  if (!$dlg.open) $dlg.showModal();
+  if (!VERSE_STRONGS) {
+    try { await ensureStrongs(); } catch { if ($dlg.dataset.v == i) draw([]); return; }
+    if ($dlg.open && $dlg.dataset.v == i) draw(VERSE_STRONGS.get(i) || []);
+  }
+}
+
+$dlg.addEventListener("click", async e => {
+  if (e.target === $dlg) return $dlg.close(); // backdrop
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const i = Number($dlg.dataset.v), act = b.dataset.act, cite = VERSES[i][3] + "\n— " + refOf(i) + " (KJV)";
+  if (act === "close") $dlg.close();
+  else if (act === "bm") { toggleSaved(i); openVerse(i); }
+  else if (act === "copy") { try { await navigator.clipboard.writeText(cite); b.textContent = "Copied"; } catch { b.textContent = "Copy failed"; } }
+  else if (act === "share") { try { await navigator.share({ text: cite }); } catch {} }
+});
+
+// on the Saved tab, refresh the list once the dialog closes (a bookmark may have been removed)
+$dlg.addEventListener("close", () => { if (location.hash === "#/saved" && BOOKS) viewSaved(); });
+
+// ---------------------------------------------------------------- events + router
+$app.addEventListener("click", e => {
+  if (e.target.closest("#showmore")) return showMore();
+  const v = e.target.closest("[data-v]"); if (v) openVerse(Number(v.dataset.v));
+});
+
+function route() {
+  if ($dlg.open) $dlg.close();
+  const [path, qs] = (location.hash || "#/search").slice(1).split("?");
+  const p = path.split("/").filter(Boolean).map(decodeURIComponent);
+  const prefix = new URLSearchParams(qs || "").get("prefix") === "1";
+  const tab = { word: "search", search: "search", read: "read", strongs: "strongs", saved: "saved" }[p[0] || "search"] || "search";
+  document.querySelectorAll("nav.tabs a").forEach(a => {
+    if (a.dataset.tab === tab) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  document.title = "KJV Concordance";
+  switch (p[0] || "search") {
+    case "search": viewSearch(); break;
+    case "word": p[1] ? viewWord(norm(p[1]), prefix) : notFound(); break;
+    case "read": !p[1] ? viewRead() : !p[2] ? viewBook(+p[1]) : viewChapter(+p[1], +p[2]); break;
+    case "strongs": p[1] ? viewStrongsEntry(p[1]) : viewStrongs(); break;
+    case "saved": viewSaved(); break;
+    default: notFound();
+  }
+  if (p[0] !== "search" && p[0]) window.scrollTo(0, 0);
+}
+
+// theme toggle (remembered per browser)
+(function () {
+  const root = document.documentElement, saved = store.get("kjvc.theme", null);
+  if (saved) root.dataset.theme = saved;
+  document.getElementById("theme").addEventListener("click", () => {
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    store.set("kjvc.theme", root.dataset.theme);
+  });
+})();
+
+Promise.all([getJSON("data/books.json"), getJSON("data/verses.json")]).then(([b, v]) => {
+  BOOKS = b; VERSES = v; buildIndex();
+  addEventListener("hashchange", route);
+  route();
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+}).catch(e => { $app.innerHTML = '<p class="status err">Could not load the Bible data: ' + esc(e.message) + "<br>If you opened this file directly from disk, serve the folder over http instead (see the README).</p>"; });
+</script>
+</body>
+</html>
